@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: wellness-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wellness_db
+      POSTGRES_USER: wellness_user
+      POSTGRES_PASSWORD: wellness_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wellness_user -d wellness_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wellness-network
+
+  redis:
+    image: redis:8.6-alpine
+    container_name: wellness-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - wellness-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wellness-network:
+    driver: bridge
