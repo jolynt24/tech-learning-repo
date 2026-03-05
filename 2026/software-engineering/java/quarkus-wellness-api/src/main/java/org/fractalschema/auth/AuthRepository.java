@@ -12,8 +12,8 @@ public class AuthRepository {
         return User.existsByEmail(email);
     }
 
-    public User findByUsername(String username ) {
-        return User.find("LOWER(username)", username.toLowerCase()).firstResult();
+    public User findByUsername(String username) {
+        return User.find("LOWER(username) = ?1", username.toLowerCase()).firstResult();
     }
 
     public void save(User user) {

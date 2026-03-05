@@ -1,6 +1,5 @@
 package org.fractalschema.auth;
 
-import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.security.jpa.*;
 import jakarta.persistence.Column;

@@ -10,8 +10,8 @@ import lombok.Setter;
 public class UpdateProfileRequest {
 
     @Email
-    public String email;
+    private String email;
 
     @Size(min = 8)
-    public String password;
+    private String password;
 }

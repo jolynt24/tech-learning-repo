@@ -46,8 +46,6 @@ public class AuthService {
             authRepository.save(user);
 
             return new UserResponse(user);
-        } catch (CustomExceptions e) {
-            throw e;
         } catch (Exception e) {
             throw new CustomExceptions(
                     ErrorCode.DATABASE_ERROR,
@@ -83,15 +81,11 @@ public class AuthService {
     }
 
     public UserResponse me() {
-        try {
-            User user = authRepository.findByUsername(securityConfig.getUserIdentity());
-            if (user == null) {
-                throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
-            }
-            return new UserResponse(user);
-        } catch (CustomExceptions e) {
-            throw e;
+        User user = authRepository.findByUsername(securityConfig.getUserIdentity());
+        if (user == null) {
+            throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
+        return new UserResponse(user);
     }
 
     @Transactional
@@ -112,7 +106,6 @@ public class AuthService {
         } else {
             throw new CustomExceptions(ErrorCode.BAD_REQUEST);
         }
-        authRepository.save(user);
         return new UserResponse(user);
     }
 
@@ -125,11 +118,10 @@ public class AuthService {
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
-        AuthResponse authResponse = new AuthResponse(
+        return new AuthResponse(
                 jwtUtil.generateAccessToken(username, user.getRoles()),
                 jwtUtil.generateRefreshToken(username),
                 username,
                 jwtUtil.accessTokenExpiry());
-        return authResponse;
     }
 }

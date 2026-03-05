@@ -1,6 +1,5 @@
 package org.fractalschema.auth;
 
-import org.fractalschema.config.SecurityConfig;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -12,7 +11,6 @@ import org.fractalschema.dto.request.RegisterRequest;
 import org.fractalschema.dto.request.UpdateProfileRequest;
 import org.fractalschema.dto.response.AuthResponse;
 import org.fractalschema.dto.response.UserResponse;
-import org.fractalschema.util.JwtUtil;
 
 @Path("/api/auth")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -20,9 +18,6 @@ import org.fractalschema.util.JwtUtil;
 public class AuthResource {
 
     @Inject AuthService authService;
-    @Inject SecurityConfig securityConfig;
-    @Inject
-    JwtUtil jwtUtil;
 
     @POST @Path("/register")
     public Response registerUser(@Valid RegisterRequest registerRequest) {
