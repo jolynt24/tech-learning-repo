@@ -22,7 +22,7 @@ nb-configuration.xml
 .factorypath
 
 # OSX
-**/.DS_Store
+.DS_Store
 
 # Vim
 *.swp
@@ -41,7 +41,10 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
+# Claude
+.claude/
 
+# Sensitive files
 *.pem
 *.key
 .env*

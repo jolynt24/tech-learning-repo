@@ -1,6 +1,6 @@
 # Wellness API
 
-A REST authentication API built with Quarkus. Handles user registration, login, JWT token issuance and refresh, and profile management backed by PostgreSQL.
+A REST API built with Quarkus for tracking daily wellness. Handles user registration, login, JWT auth, and daily entries covering sleep, water, workouts, reading, hobbies, mood, and meals — all backed by PostgreSQL.
 
 ## Tech Stack
 
@@ -53,7 +53,9 @@ The API is available at `http://localhost:8080`. Quarkus Dev UI is at `http://lo
 
 ## API Reference
 
-Base path: `/api/auth`
+All entry endpoints require a valid access token (`Authorization: Bearer <token>`) and the `user` role.
+
+### Auth — `/api/auth`
 
 ### Register
 
@@ -165,6 +167,131 @@ curl -X PUT http://localhost:8080/api/auth/profile \
 
 ---
 
+### Entries — `/api/entries`
+
+All endpoints require auth (`user` role). Dates use `YYYY-MM-DD` format.
+
+#### Create Entry
+
+```bash
+POST /api/entries
+```
+
+Creates a daily wellness entry. `entryDate` defaults to today. All fields except `entryDate` are optional. Meals is a list — each meal requires `mealType` and `description`.
+
+```bash
+curl -X POST http://localhost:8080/api/entries \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entryDate": "2026-03-06",
+    "sleepHours": 7.5,
+    "sleepQuality": 4,
+    "waterMl": 2000,
+    "workoutDone": true,
+    "workoutType": "Running",
+    "workoutDurationMin": 30,
+    "readingMinutes": 20,
+    "readingPages": 15,
+    "readingBook": "Clean Code",
+    "hobbyActivity": "Guitar",
+    "hobbyDurationMin": 45,
+    "moodRating": 4,
+    "notes": "Good day overall",
+    "meals": [
+      { "mealType": "BREAKFAST", "description": "Oats and fruit", "calories": 400 },
+      { "mealType": "LUNCH", "description": "Chicken salad", "calories": 550 }
+    ]
+  }'
+```
+
+`mealType` values: `BREAKFAST`, `LUNCH`, `DINNER`, `SNACK`
+
+**Response `201`** — full entry with meals.
+
+---
+
+#### Get Entry by Date
+
+```bash
+GET /api/entries/{date}
+```
+
+```bash
+curl http://localhost:8080/api/entries/2026-03-06 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`** — entry for that date. `404` if not found.
+
+---
+
+#### Update Entry
+
+```bash
+PUT /api/entries/{date}
+```
+
+Replaces fields on an existing entry. Meals list replaces existing meals.
+
+```bash
+curl -X PUT http://localhost:8080/api/entries/2026-03-06 \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "waterMl": 2500, "moodRating": 5 }'
+```
+
+**Response `200`** — updated entry. `404` if not found.
+
+---
+
+#### Delete Entry
+
+```bash
+DELETE /api/entries/{date}
+```
+
+```bash
+curl -X DELETE http://localhost:8080/api/entries/2026-03-06 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `204`** — no content. `404` if not found.
+
+---
+
+#### Get Entries by Date Range
+
+```bash
+GET /api/entries/range?from=YYYY-MM-DD&to=YYYY-MM-DD
+```
+
+```bash
+curl "http://localhost:8080/api/entries/range?from=2026-03-01&to=2026-03-06" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`** — array of entries.
+
+---
+
+#### Get Latest Entries
+
+```bash
+GET /api/entries/latest?limit=7
+```
+
+Returns the most recent N entries. `limit` defaults to `7`.
+
+```bash
+curl "http://localhost:8080/api/entries/latest?limit=5" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`** — array of entries, newest first.
+
+---
+
 ## Error Responses
 
 All errors return a consistent JSON structure:
@@ -180,6 +307,8 @@ All errors return a consistent JSON structure:
 | 1003 | 401 | Invalid credentials |
 | 2001 | 500 | Database error |
 | 3001 | 400 | Bad request (e.g. no fields provided for profile update) |
+| 4001 | 409 | Duplicate entry for that date |
+| 4002 | 404 | Entry not found |
 
 ---
 

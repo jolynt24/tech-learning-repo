@@ -11,7 +11,11 @@ public enum ErrorCode {
     DATABASE_ERROR(2001, "Database operation failed", 500),
 
     // Requests
-    BAD_REQUEST(3001, "Bad Request", 400);
+    BAD_REQUEST(3001, "Bad Request", 400),
+
+    // Application
+    DUPLICATE_ENTRY(4001, "Duplicate entry", 409),
+    ENTRY_NOT_FOUND(4002, "Entry not found", 404);
 
     private final int code;
     private final String message;

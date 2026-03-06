@@ -1,7 +1,17 @@
 # tech-learning-repo
-A public of all the things that I have learned and documented.
+A record of things learned and documented.
+
+## Setup Guides
+
+| Guide | Description |
+|---|---|
+| [java-quarkus-dev-setup](setup-guides/java-quarkus-dev-setup.md) | Java, Maven, Quarkus, Docker, IntelliJ, GitHub on macOS |
 
 ## 2026
 
-### Software Engineering
-- Java Quakus Sample Code: [code-with-quarkus](/2026/software-engineering/code-with-quarkus/)
+### Software Engineering — Java
+
+| Project | Description |
+|---|---|
+| [quarkus-freecodecamp-tutorial](2026/software-engineering/java/quarkus-freecodecamp-tutorial) | Quarkus sample code from freeCodeCamp tutorial |
+| [quarkus-wellness-api](2026/software-engineering/java/quarkus-wellness-api) | REST API with JWT auth, PostgreSQL, and Redis |

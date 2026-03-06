@@ -20,8 +20,6 @@ import java.time.Instant;
 @ApplicationScoped
 public class AuthService {
 
-    @Inject AuthRepository authRepository;
-
     @Inject JwtUtil jwtUtil;
     @Inject JsonWebToken jwt;
 
@@ -30,7 +28,7 @@ public class AuthService {
 
     @Transactional
     public UserResponse register(RegisterRequest registerRequest) {
-        if (authRepository.existsByUsername(registerRequest.getUsername()) || authRepository.existsByEmail(registerRequest.getEmail())) {
+        if (User.existsByUsername(registerRequest.getUsername()) || User.existsByEmail(registerRequest.getEmail())) {
             throw new CustomExceptions(ErrorCode.USER_EXISTS);
         }
         try {
@@ -43,7 +41,7 @@ public class AuthService {
             user.setCreatedAt(now);
             user.setUpdatedAt(now);
             user.setRoles("user");
-            authRepository.save(user);
+            user.persist();
 
             return new UserResponse(user);
         } catch (Exception e) {
@@ -57,7 +55,7 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest loginRequest) {
         try {
-            User user = authRepository.findByUsername(loginRequest.getUsername());
+            User user = User.findByEmail(loginRequest.getEmail());
             if (user == null) {
                 throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
             }
@@ -81,7 +79,7 @@ public class AuthService {
     }
 
     public UserResponse me() {
-        User user = authRepository.findByUsername(securityConfig.getUserIdentity());
+        User user = User.findByUsername(securityConfig.getUserIdentity());
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
@@ -90,22 +88,21 @@ public class AuthService {
 
     @Transactional
     public UserResponse profile(UpdateProfileRequest profile) {
-        User user = authRepository.findByUsername(securityConfig.getUserIdentity());
+        User user = User.findByUsername(securityConfig.getUserIdentity());
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
         if (profile.getEmail() != null) {
-            if (authRepository.existsByEmail(profile.getEmail())) {
+            if (User.existsByEmail(profile.getEmail())) {
                 throw new CustomExceptions(ErrorCode.USER_EXISTS);
             }
             user.setEmail(profile.getEmail());
-            user.setUpdatedAt(Instant.now());
         } else if (profile.getPassword() != null) {
             user.setPassword(passwordEncoder.hash(profile.getPassword()));
-            user.setUpdatedAt(Instant.now());
         } else {
             throw new CustomExceptions(ErrorCode.BAD_REQUEST);
         }
+        user.setUpdatedAt(Instant.now());
         return new UserResponse(user);
     }
 
@@ -114,7 +111,7 @@ public class AuthService {
         if (! "refresh".equals(jwt.getClaim("type"))) {
             throw new CustomExceptions(ErrorCode.BAD_REQUEST);
         }
-        User user = authRepository.findByUsername(username);
+        User user = User.findByUsername(username);
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
