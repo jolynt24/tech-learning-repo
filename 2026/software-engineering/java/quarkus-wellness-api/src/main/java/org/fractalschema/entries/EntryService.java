@@ -1,10 +1,10 @@
 package org.fractalschema.entries;
 
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.fractalschema.auth.User;
-import org.fractalschema.config.SecurityConfig;
 import org.fractalschema.dto.request.CreateEntryRequest;
 import org.fractalschema.dto.request.MealRequest;
 import org.fractalschema.dto.request.UpdateEntryRequest;
@@ -20,10 +20,10 @@ import java.util.Optional;
 public class EntryService {
 
     @Inject
-    SecurityConfig securityConfig;
+    SecurityIdentity identity;
 
     private User getCurrentUser() {
-        return User.find("username=?1", securityConfig.getUserIdentity()).firstResult();
+        return User.findByUsername(identity.getPrincipal().getName());
     }
 
     private void addMealsToEntry(List<MealRequest> mealRequests, DailyEntry entry) {

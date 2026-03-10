@@ -1,10 +1,10 @@
 package org.fractalschema.auth;
 
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.fractalschema.config.SecurityConfig;
 import org.fractalschema.dto.request.LoginRequest;
 import org.fractalschema.dto.request.RegisterRequest;
 import org.fractalschema.dto.request.UpdateProfileRequest;
@@ -24,7 +24,12 @@ public class AuthService {
     @Inject JsonWebToken jwt;
 
     @Inject PasswordEncoder passwordEncoder;
-    @Inject SecurityConfig securityConfig;
+    @Inject
+    SecurityIdentity identity;
+
+    private User getCurrentUser() {
+        return User.<User>find("username", identity.getPrincipal().getName()).firstResult();
+    }
 
     @Transactional
     public UserResponse register(RegisterRequest registerRequest) {
@@ -79,7 +84,7 @@ public class AuthService {
     }
 
     public UserResponse me() {
-        User user = User.findByUsername(securityConfig.getUserIdentity());
+        User user = getCurrentUser();
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
@@ -88,7 +93,7 @@ public class AuthService {
 
     @Transactional
     public UserResponse profile(UpdateProfileRequest profile) {
-        User user = User.findByUsername(securityConfig.getUserIdentity());
+        User user = getCurrentUser();
         if (user == null) {
             throw new CustomExceptions(ErrorCode.INVALID_CREDENTIALS);
         }
@@ -107,7 +112,7 @@ public class AuthService {
     }
 
     public AuthResponse refresh() {
-        String username = securityConfig.getUserIdentity();
+        String username = identity.getPrincipal().getName();
         if (! "refresh".equals(jwt.getClaim("type"))) {
             throw new CustomExceptions(ErrorCode.BAD_REQUEST);
         }

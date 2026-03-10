@@ -1,5 +1,8 @@
 package org.fractalschema.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum ErrorCode {
 
     // Auth Errors
@@ -15,7 +18,8 @@ public enum ErrorCode {
 
     // Application
     DUPLICATE_ENTRY(4001, "Duplicate entry", 409),
-    ENTRY_NOT_FOUND(4002, "Entry not found", 404);
+    ENTRY_NOT_FOUND(4002, "Entry not found", 404),
+    GOAL_NOT_FOUND(4003, "Goal not found", 404);
 
     private final int code;
     private final String message;
@@ -25,17 +29,5 @@ public enum ErrorCode {
         this.code = code;
         this.message = message;
         this.statusCode = statusCode;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
     }
 }

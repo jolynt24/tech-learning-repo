@@ -2,8 +2,10 @@ package org.fractalschema.exceptions;
 
 import org.fractalschema.enums.ErrorCode;
 
-public record ErrorResponse(int code, String message) {
+import java.time.Instant;
+
+public record ErrorResponse(int code, String message, Instant timestamp) {
     public ErrorResponse(ErrorCode errorCode) {
-        this(errorCode.getCode(), errorCode.getMessage());
+        this(errorCode.getCode(), errorCode.getMessage(), Instant.now());
     }
 }

@@ -25,7 +25,6 @@ import java.util.List;
 public class DailyEntry extends PanacheEntity {
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -33,7 +32,7 @@ public class DailyEntry extends PanacheEntity {
     @Column(name = "entry_date", nullable = false)
     private LocalDate entryDate;
 
-    @DecimalMin("0.0") @DecimalMax("24.0")
+    @DecimalMin(value = "0.0", inclusive = false) @DecimalMax("24.0")
     @Column(name = "sleep_hours", precision = 4, scale = 2)
     private BigDecimal sleepHours;
 
@@ -80,10 +79,10 @@ public class DailyEntry extends PanacheEntity {
     @Column(name = "mood_rating")
     private Integer moodRating;
 
-    @Column(name = "notes", length = Integer.MAX_VALUE)
+    @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
