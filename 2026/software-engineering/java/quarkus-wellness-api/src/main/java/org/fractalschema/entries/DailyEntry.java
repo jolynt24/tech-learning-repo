@@ -10,7 +10,6 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -33,8 +32,8 @@ public class DailyEntry extends PanacheEntity {
     private LocalDate entryDate;
 
     @DecimalMin(value = "0.0", inclusive = false) @DecimalMax("24.0")
-    @Column(name = "sleep_hours", precision = 4, scale = 2)
-    private BigDecimal sleepHours;
+    @Column(name = "sleep_hours")
+    private Double sleepHours;
 
     @Min(1) @Max(5)
     @Column(name = "sleep_quality")

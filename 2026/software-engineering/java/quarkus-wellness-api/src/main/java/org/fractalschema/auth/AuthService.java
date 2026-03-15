@@ -28,7 +28,7 @@ public class AuthService {
     SecurityIdentity identity;
 
     private User getCurrentUser() {
-        return User.<User>find("username", identity.getPrincipal().getName()).firstResult();
+        return User.findByUsername(identity.getPrincipal().getName());
     }
 
     @Transactional

@@ -430,4 +430,25 @@ public class GoalResourceTest {
             .then()
             .statusCode(401);
     }
+
+    // ── PROGRESS ──────────────────────────────────────────────────────────────
+
+    @Test
+    void getGoalProgress_shouldReturn501NotImplemented() {
+        given()
+            .header("Authorization", "Bearer " + token)
+            .queryParam("period", "WEEK")
+            .when().get("/api/goals/progress")
+            .then()
+            .statusCode(501);
+    }
+
+    @Test
+    void getGoalProgress_unauthenticated_shouldReturn401() {
+        given()
+            .queryParam("period", "WEEK")
+            .when().get("/api/goals/progress")
+            .then()
+            .statusCode(401);
+    }
 }

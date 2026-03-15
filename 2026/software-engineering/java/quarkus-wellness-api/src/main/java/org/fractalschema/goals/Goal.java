@@ -30,7 +30,7 @@ public class Goal extends PanacheEntity {
 
     @NotNull
     @Column(name = "target_value", nullable = false)
-    private BigDecimal targetValue;
+    private Double targetValue;
 
     @NotNull @Enumerated(EnumType.STRING)
     @Column(name = "frequency", nullable = false, length = 20)

@@ -5,7 +5,6 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,7 +12,7 @@ import java.util.List;
 public class UpdateEntryRequest {
 
     @DecimalMin("0.0") @DecimalMax("24.0")
-    private BigDecimal sleepHours;
+    private Double sleepHours;
 
     @Min(1) @Max(5)
     private Integer sleepQuality;

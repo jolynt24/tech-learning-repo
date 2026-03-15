@@ -1,4 +1,4 @@
-package org.fractalschema.exceptions;
+package org.fractalschema.dto.response;
 
 import org.fractalschema.enums.ErrorCode;
 

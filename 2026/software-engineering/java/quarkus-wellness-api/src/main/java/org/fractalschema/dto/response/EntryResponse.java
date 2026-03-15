@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Getter;
 import org.fractalschema.entries.DailyEntry;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +14,7 @@ public class EntryResponse {
     private Long id;
     private Long userId;
     private LocalDate entryDate;
-    private BigDecimal sleepHours;
+    private Double sleepHours;
     private Integer sleepQuality;
     private Integer waterMl;
     private Boolean workoutDone;

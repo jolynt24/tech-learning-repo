@@ -1,24 +1,29 @@
 # Wellness API
 
-A REST API built with Quarkus for tracking daily wellness. Handles user registration, login, JWT auth, and daily entries covering sleep, water, workouts, reading, hobbies, mood, and meals — all backed by PostgreSQL.
+A REST API built with Quarkus for tracking daily wellness. Handles user registration, login, JWT auth, and daily entries covering sleep, water, workouts, reading, hobbies, mood, and meals — plus goal tracking, streak calculation, and analytics. Backed by PostgreSQL with Redis caching.
 
 ## Tech Stack
 
-- **Quarkus** — framework
-- **Hibernate ORM + Panache** — database access
-- **PostgreSQL** — primary database
-- **Redis** — available for caching
-- **SmallRye JWT** — token signing and verification (RSA)
-- **Quarkus Security JPA** — role-based access control
-- **Gradle** — build tool
-- **Lombok** — boilerplate reduction
+| Layer | Technology |
+|-------|-----------|
+| Framework | Quarkus 3.x |
+| Language | Java 17 |
+| ORM | Hibernate ORM + Panache (active record) |
+| Database | PostgreSQL |
+| Cache | Redis |
+| Auth | SmallRye JWT (RS256) |
+| Security | Quarkus Security JPA |
+| Migrations | Flyway |
+| Build | Gradle |
+| Boilerplate | Lombok |
+| Observability | Micrometer + Prometheus, SmallRye Health |
 
 ---
 
 ## Prerequisites
 
-- Java 21+
-- Docker (for PostgreSQL and Redis)
+- Java 17+
+- Docker and Docker Compose
 
 ---
 
@@ -39,7 +44,11 @@ openssl rsa -pubout -in src/main/resources/privateKey.pem -out src/main/resource
 docker-compose up -d
 ```
 
-This starts PostgreSQL on port `5432` and Redis on port `6379`.
+This starts:
+- PostgreSQL on port `5432` (`wellness_db` / `wellness_user` / `wellness_pass`)
+- Redis on port `6379`
+
+Flyway runs automatically on startup and creates all tables, indexes, and triggers via `src/main/resources/db/V1__init.sql`.
 
 ### 3. Run the app
 
@@ -47,23 +56,37 @@ This starts PostgreSQL on port `5432` and Redis on port `6379`.
 ./gradlew quarkusDev
 ```
 
-The API is available at `http://localhost:8080`. Quarkus Dev UI is at `http://localhost:8080/q/dev/`.
+The API is available at `http://localhost:8080`.
+Swagger UI: `http://localhost:8080/q/swagger-ui`
+Dev UI: `http://localhost:8080/q/dev`
+Health check: `http://localhost:8080/q/health`
+Metrics (Prometheus): `http://localhost:8080/q/metrics`
+
+---
+
+## Authentication
+
+The API uses JWT Bearer tokens. All endpoints under `/api/entries`, `/api/goals`, and `/api/analytics` require:
+
+```
+Authorization: Bearer <access_token>
+```
+
+Tokens are RS256-signed. Access tokens expire in 1 hour. Refresh tokens expire in 7 days and carry a `"type": "refresh"` claim — they only work on `POST /api/auth/refresh`.
 
 ---
 
 ## API Reference
 
-All entry endpoints require a valid access token (`Authorization: Bearer <token>`) and the `user` role.
-
 ### Auth — `/api/auth`
 
-### Register
+#### Register
 
-```bash
+```
 POST /api/auth/register
 ```
 
-Creates a new user account. Username and email must be unique (case-insensitive). Password must be at least 8 characters.
+Creates a new user account. Username must be unique (min 3 chars). Email must be unique and valid format. Password must be at least 8 characters.
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/register \
@@ -78,18 +101,18 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ---
 
-### Login
+#### Login
 
-```bash
+```
 POST /api/auth/login
 ```
 
-Authenticates a user and returns an access token (1 hour) and refresh token (7 days).
+Authenticates with **email + password** and returns an access token (1h) and refresh token (7d).
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "alice", "password": "secret123"}'
+  -d '{"email": "alice@example.com", "password": "secret123"}'
 ```
 
 **Response `200`**
@@ -98,19 +121,34 @@ curl -X POST http://localhost:8080/api/auth/login \
   "token": "<access_token>",
   "refreshToken": "<refresh_token>",
   "user": "alice",
-  "expiresIn": "2026-03-04T13:00:00Z"
+  "expiresIn": "2026-03-15T13:00:00Z"
 }
 ```
 
 ---
 
-### Get Current User
+#### Refresh Token
 
-```bash
-GET /api/auth/me
+```
+POST /api/auth/refresh
 ```
 
-Returns the authenticated user's profile. Requires a valid access token.
+Issues a new token pair. Must use the **refresh token** (not the access token).
+
+```bash
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Authorization: Bearer <refresh_token>"
+```
+
+**Response `200`** — same shape as login.
+
+---
+
+#### Get Current User
+
+```
+GET /api/auth/me
+```
 
 ```bash
 curl http://localhost:8080/api/auth/me \
@@ -124,30 +162,13 @@ curl http://localhost:8080/api/auth/me \
 
 ---
 
-### Refresh Token
+#### Update Profile
 
-```bash
-POST /api/auth/refresh
 ```
-
-Issues a new access + refresh token pair. Must be called with a **refresh token** (not an access token).
-
-```bash
-curl -X POST http://localhost:8080/api/auth/refresh \
-  -H "Authorization: Bearer <refresh_token>"
-```
-
-**Response `200`** — same shape as login response.
-
----
-
-### Update Profile
-
-```bash
 PUT /api/auth/profile
 ```
 
-Updates the authenticated user's email or password. Provide one field at a time.
+Updates email or password. Provide one field at a time.
 
 ```bash
 # Update email
@@ -169,22 +190,22 @@ curl -X PUT http://localhost:8080/api/auth/profile \
 
 ### Entries — `/api/entries`
 
-All endpoints require auth (`user` role). Dates use `YYYY-MM-DD` format.
+All endpoints require auth. Dates use `YYYY-MM-DD` format. Each user can have one entry per date.
 
 #### Create Entry
 
-```bash
+```
 POST /api/entries
 ```
 
-Creates a daily wellness entry. `entryDate` defaults to today. All fields except `entryDate` are optional. Meals is a list — each meal requires `mealType` and `description`.
+All fields except `entryDate` are optional. `entryDate` defaults to today.
 
 ```bash
 curl -X POST http://localhost:8080/api/entries \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "entryDate": "2026-03-06",
+    "entryDate": "2026-03-15",
     "sleepHours": 7.5,
     "sleepQuality": 4,
     "waterMl": 2000,
@@ -213,12 +234,12 @@ curl -X POST http://localhost:8080/api/entries \
 
 #### Get Entry by Date
 
-```bash
+```
 GET /api/entries/{date}
 ```
 
 ```bash
-curl http://localhost:8080/api/entries/2026-03-06 \
+curl http://localhost:8080/api/entries/2026-03-15 \
   -H "Authorization: Bearer <access_token>"
 ```
 
@@ -228,14 +249,14 @@ curl http://localhost:8080/api/entries/2026-03-06 \
 
 #### Update Entry
 
-```bash
+```
 PUT /api/entries/{date}
 ```
 
-Replaces fields on an existing entry. Meals list replaces existing meals.
+Updates fields on an existing entry. A non-null `meals` list replaces all existing meals.
 
 ```bash
-curl -X PUT http://localhost:8080/api/entries/2026-03-06 \
+curl -X PUT http://localhost:8080/api/entries/2026-03-15 \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{ "waterMl": 2500, "moodRating": 5 }'
@@ -247,37 +268,37 @@ curl -X PUT http://localhost:8080/api/entries/2026-03-06 \
 
 #### Delete Entry
 
-```bash
+```
 DELETE /api/entries/{date}
 ```
 
 ```bash
-curl -X DELETE http://localhost:8080/api/entries/2026-03-06 \
+curl -X DELETE http://localhost:8080/api/entries/2026-03-15 \
   -H "Authorization: Bearer <access_token>"
 ```
 
-**Response `204`** — no content. `404` if not found.
+**Response `204`**. `404` if not found.
 
 ---
 
 #### Get Entries by Date Range
 
-```bash
+```
 GET /api/entries/range?from=YYYY-MM-DD&to=YYYY-MM-DD
 ```
 
 ```bash
-curl "http://localhost:8080/api/entries/range?from=2026-03-01&to=2026-03-06" \
+curl "http://localhost:8080/api/entries/range?from=2026-03-01&to=2026-03-15" \
   -H "Authorization: Bearer <access_token>"
 ```
 
-**Response `200`** — array of entries.
+**Response `200`** — array of entries ordered by date ascending.
 
 ---
 
 #### Get Latest Entries
 
-```bash
+```
 GET /api/entries/latest?limit=7
 ```
 
@@ -289,6 +310,227 @@ curl "http://localhost:8080/api/entries/latest?limit=5" \
 ```
 
 **Response `200`** — array of entries, newest first.
+
+---
+
+### Goals — `/api/goals`
+
+Set targets for wellness metrics. Each goal has a type, target value, frequency, and optional end date.
+
+`goalType` values: `SLEEP`, `WATER`, `WORKOUT`, `READING`, `HOBBY`
+`goalFrequency` values: `DAILY`, `WEEKLY`, `MONTHLY`
+
+#### Create Goal
+
+```
+POST /api/goals
+```
+
+```bash
+curl -X POST http://localhost:8080/api/goals \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goalType": "SLEEP",
+    "target": 7.5,
+    "goalFrequency": "DAILY",
+    "startDate": "2026-03-01",
+    "endDate": "2026-06-01"
+  }'
+```
+
+**Response `201`**
+```json
+{
+  "id": 1,
+  "goalLabel": "Sleep",
+  "goalMetrics": "hours",
+  "target": 7.5,
+  "goalFrequency": "Daily",
+  "frequencyDays": 1,
+  "active": true,
+  "startDate": "2026-03-01",
+  "endDate": "2026-06-01",
+  "createdAt": "2026-03-15T09:00:00Z"
+}
+```
+
+---
+
+#### Get All Goals
+
+```
+GET /api/goals
+```
+
+```bash
+curl http://localhost:8080/api/goals \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`** — array of goals ordered by start date.
+
+---
+
+#### Get Goal by ID
+
+```
+GET /api/goals/{id}
+```
+
+```bash
+curl http://localhost:8080/api/goals/1 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`** — goal. `404` if not found or belongs to another user.
+
+---
+
+#### Update Goal
+
+```
+PATCH /api/goals/{id}
+```
+
+All fields optional — only provided fields are updated.
+
+```bash
+curl -X PATCH http://localhost:8080/api/goals/1 \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "target": 8.0, "active": false }'
+```
+
+**Response `200`** — updated goal. `404` if not found.
+
+---
+
+#### Delete Goal
+
+```
+DELETE /api/goals/{id}
+```
+
+```bash
+curl -X DELETE http://localhost:8080/api/goals/1 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `204`**. `404` if not found.
+
+---
+
+### Analytics — `/api/analytics`
+
+#### Current Streaks
+
+```
+GET /api/analytics/streaks
+```
+
+Returns the current streak (consecutive days goal was met) for each active goal type.
+
+```bash
+curl http://localhost:8080/api/analytics/streaks \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`**
+```json
+[
+  {
+    "goalType": "SLEEP",
+    "currentStreak": 5,
+    "longestStreak": 5,
+    "activeToday": true,
+    "calculatedAt": "2026-03-15T09:00:00Z"
+  }
+]
+```
+
+---
+
+#### Trend Analysis
+
+```
+GET /api/analytics/trends?metric=SLEEP&period=30
+```
+
+Returns average, min, max, trend direction, and daily data points for a metric over the past N days.
+
+`metric` values: `SLEEP`, `WATER`, `WORKOUT`, `READING`, `HOBBY`
+`period`: number of days to look back (e.g. `7`, `30`, `90`)
+
+```bash
+curl "http://localhost:8080/api/analytics/trends?metric=SLEEP&period=30" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`**
+```json
+{
+  "metric": "SLEEP",
+  "period": 30,
+  "average": 7.2,
+  "min": 5.5,
+  "max": 9.0,
+  "trendDirection": "INCREASING",
+  "dataPoints": [
+    { "time": "2026-02-14", "value": 6.5 },
+    { "time": "2026-02-15", "value": 7.0 }
+  ]
+}
+```
+
+`trendDirection` values: `INCREASING`, `DECREASING`, `STABLE`
+
+---
+
+#### Period Summary
+
+```
+GET /api/analytics/summary?period=WEEK
+```
+
+Returns aggregated stats for the past week or month, including streak information.
+
+`period` values: `WEEK` (7 days), `MONTH` (30 days)
+
+```bash
+curl "http://localhost:8080/api/analytics/summary?period=WEEK" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Response `200`**
+```json
+{
+  "period": "WEEK",
+  "startDate": "2026-03-08",
+  "endDate": "2026-03-15",
+  "totalEntries": 6,
+  "avgSleepHours": 7.3,
+  "avgWaterMl": 1950,
+  "workoutDays": 4,
+  "totalWorkoutDuration": 120,
+  "totalReadingMinutes": 140,
+  "totalHobbyMinutes": 200,
+  "avgMoodRating": 4.2,
+  "streaks": [...]
+}
+```
+
+---
+
+## Scheduled Jobs
+
+Three background jobs run automatically:
+
+| Job | Schedule | What it does |
+|-----|----------|-------------|
+| `calculateDailyStreaks` | 1 AM daily | Checks yesterday's entries against each user's active goals; invalidates streak caches |
+| `cleanupExpiredGoals` | 1 AM daily | Deactivates goals where `endDate < today` |
+| `warmupPopularCaches` | Every 6 hours | Pre-calculates WEEK and MONTH summaries for all users with active goals |
 
 ---
 
@@ -304,28 +546,55 @@ All errors return a consistent JSON structure:
 |------|------|---------|
 | 1001 | 409 | Username or email already exists |
 | 1002 | 401 | Login error |
-| 1003 | 401 | Invalid credentials |
-| 2001 | 500 | Database error |
+| 1003 | 401 | Invalid credentials / user not found |
+| 1004 | 401 | Forbidden access |
+| 2001 | 500 | Database operation failed |
 | 3001 | 400 | Bad request (e.g. no fields provided for profile update) |
+| 3002 | 400 | Validation error |
 | 4001 | 409 | Duplicate entry for that date |
 | 4002 | 404 | Entry not found |
+| 4003 | 404 | Goal not found |
+| 4004 | 500 | JSON processing issue |
+
+---
+
+## Running Tests
+
+```bash
+./gradlew test
+```
+
+Tests use `@QuarkusTest` and run against the real database (PostgreSQL must be running). Each test class creates its own users and data — no shared state.
+
+Test files:
+
+| File | Coverage |
+|------|---------|
+| `AuthResourceTest` | Register, login, refresh, me, profile update |
+| `EntryResourceTest` | Create, get, update, delete, range, latest |
+| `GoalResourceTest` | Create, get, update, delete, goal progress stub |
+| `AnalyticsResourceTest` | Streaks, trends, summary — all edge cases |
+| `CrossUserIsolationTest` | Verifies users cannot access each other's data |
 
 ---
 
 ## Build
 
 ```bash
+# Run in dev mode (live reload)
+./gradlew quarkusDev
+
 # Standard JAR
 ./gradlew build
 java -jar build/quarkus-app/quarkus-run.jar
 
-# Über-JAR
+# Über-JAR (single fat jar)
 ./gradlew build -Dquarkus.package.jar.type=uber-jar
 java -jar build/*-runner.jar
 
 # Native executable (requires GraalVM)
 ./gradlew build -Dquarkus.native.enabled=true
 
-# Native build without GraalVM (uses Docker)
+# Native build via Docker (no GraalVM needed locally)
 ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
 ```

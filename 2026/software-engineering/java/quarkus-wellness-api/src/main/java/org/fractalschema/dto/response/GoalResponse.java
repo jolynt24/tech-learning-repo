@@ -3,7 +3,6 @@ package org.fractalschema.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -12,7 +11,7 @@ public class GoalResponse {
     private Long id;
     private String goalLabel;
     private String goalMetrics;
-    private BigDecimal target;
+    private Double target;
     private String goalFrequency;
     private int frequencyDays;
     private boolean active;

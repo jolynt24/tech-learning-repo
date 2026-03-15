@@ -1,10 +1,12 @@
 package org.fractalschema.entries;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.fractalschema.auth.User;
+import org.fractalschema.cache.CacheService;
 import org.fractalschema.dto.request.CreateEntryRequest;
 import org.fractalschema.dto.request.MealRequest;
 import org.fractalschema.dto.request.UpdateEntryRequest;
@@ -22,11 +24,15 @@ public class EntryService {
     @Inject
     SecurityIdentity identity;
 
+    @Inject
+    CacheService cacheService;
+
     private User getCurrentUser() {
         return User.findByUsername(identity.getPrincipal().getName());
     }
 
     private void addMealsToEntry(List<MealRequest> mealRequests, DailyEntry entry) {
+        if (mealRequests == null || mealRequests.isEmpty()) return;
         for (MealRequest mealRequest : mealRequests) {
             Meal meal = new Meal();
             meal.setMealType(mealRequest.getMealType());
@@ -40,8 +46,9 @@ public class EntryService {
     @Transactional
     public EntryResponse createEntry(CreateEntryRequest entryRequest) {
         LocalDate entryDate = entryRequest.getEntryDate();
-        User user =  getCurrentUser();
-        DailyEntry.find("user=?1 and entryDate=?2", user, entryDate).firstResultOptional()
+        User user = getCurrentUser();
+
+        DailyEntry.<DailyEntry>find("user=?1 and entryDate=?2", user, entryDate).firstResultOptional()
                 .ifPresent(e -> { throw new CustomExceptions(ErrorCode.DUPLICATE_ENTRY); });
 
         DailyEntry entry = new DailyEntry();
@@ -64,6 +71,7 @@ public class EntryService {
         addMealsToEntry(entryRequest.getMeals(), entry);
 
         entry.persist();
+        cacheService.invalidate("user:" + user.getUsername() + ":streaks");
 
         return EntryResponse.from(entry);
     }
@@ -71,30 +79,48 @@ public class EntryService {
     @Transactional
     public EntryResponse getEntry(LocalDate date) {
         User user = getCurrentUser();
-        DailyEntry entry = (DailyEntry) DailyEntry.find("user=?1 and entryDate=?2", user, date)
-                .firstResultOptional().orElseThrow(() -> new CustomExceptions(ErrorCode.ENTRY_NOT_FOUND));
 
-        return EntryResponse.from(entry);
+        String cacheKey = "user:" + user.getUsername() + ":entry:" + date;
+        Optional<EntryResponse> cached = cacheService.get(cacheKey, new TypeReference<>() {});
+        if (cached.isPresent()) return cached.get();
+
+        DailyEntry entry = DailyEntry.<DailyEntry>find("user=?1 and entryDate=?2", user, date)
+                .firstResultOptional().orElseThrow(() -> new CustomExceptions(ErrorCode.ENTRY_NOT_FOUND));
+        EntryResponse response = EntryResponse.from(entry);
+
+        cacheService.set(cacheKey, response, 24 * 3600);
+        return response;
     }
 
     @Transactional
     public List<EntryResponse> getEntry(LocalDate from, LocalDate to) {
         User user = getCurrentUser();
-        return DailyEntry.find("user=?1 and entryDate >= ?2 and entryDate <= ?3", user, from, to)
-                .stream().map(e -> EntryResponse.from((DailyEntry) e)).toList();
+
+        String cacheKey = "user:" + user.getUsername() + ":entries:range:from:" + from + ":to:" + to;
+        Optional<List<EntryResponse>> cached = cacheService.get(cacheKey, new TypeReference<>() {});
+        if (cached.isPresent()) return cached.get();
+
+        List<EntryResponse> responses = DailyEntry.<DailyEntry>find(
+                "user=?1 and entryDate >= ?2 and entryDate <= ?3 order by entryDate asc", user, from, to)
+                .stream().map(EntryResponse::from).toList();
+
+        // Short TTL — range caches cannot be precisely invalidated on mutation
+        cacheService.set(cacheKey, responses, 3600);
+        return responses;
     }
 
     @Transactional
     public List<EntryResponse> getEntry(int limit) {
         User user = getCurrentUser();
-        return DailyEntry.find("user=?1 order by entryDate desc", user).page(0, limit)
-                .stream().map(e -> EntryResponse.from((DailyEntry) e)).toList();
+        return DailyEntry.<DailyEntry>find("user=?1 order by entryDate desc", user)
+                .page(0, limit)
+                .stream().map(EntryResponse::from).toList();
     }
 
     @Transactional
     public EntryResponse updateEntry(LocalDate date, UpdateEntryRequest entryRequest) {
         User user = getCurrentUser();
-        DailyEntry entry = (DailyEntry) DailyEntry.find("user=?1 and entryDate=?2", user, date)
+        DailyEntry entry = DailyEntry.<DailyEntry>find("user=?1 and entryDate=?2", user, date)
                 .firstResultOptional().orElseThrow(() -> new CustomExceptions(ErrorCode.ENTRY_NOT_FOUND));
 
         Optional.ofNullable(entryRequest.getSleepHours()).ifPresent(entry::setSleepHours);
@@ -114,6 +140,8 @@ public class EntryService {
         entry.getMeals().clear();
         addMealsToEntry(entryRequest.getMeals(), entry);
 
+        cacheService.invalidate("user:" + user.getUsername() + ":entry:" + date);
+        cacheService.invalidate("user:" + user.getUsername() + ":streaks");
         return EntryResponse.from(entry);
     }
 
@@ -124,5 +152,7 @@ public class EntryService {
         if (count == 0L) {
             throw new CustomExceptions(ErrorCode.ENTRY_NOT_FOUND);
         }
+        cacheService.invalidate("user:" + user.getUsername() + ":entry:" + date);
+        cacheService.invalidate("user:" + user.getUsername() + ":streaks");
     }
 }

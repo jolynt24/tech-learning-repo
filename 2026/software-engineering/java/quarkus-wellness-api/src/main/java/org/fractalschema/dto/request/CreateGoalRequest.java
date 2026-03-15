@@ -8,7 +8,6 @@ import lombok.Setter;
 import org.fractalschema.enums.GoalFrequency;
 import org.fractalschema.enums.GoalType;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter @Setter @NoArgsConstructor
@@ -18,7 +17,7 @@ public class CreateGoalRequest {
     private GoalType goalType;
 
     @NotNull @DecimalMin(value = "0", inclusive = false)
-    private BigDecimal target;
+    private Double target;
 
     @NotNull
     private GoalFrequency goalFrequency;
