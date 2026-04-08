@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'build-day-quarkus/**'
+      - '**/build-day-quarkus/**'
   workflow_dispatch:
 
 concurrency:
