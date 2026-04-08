@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Build Day: Quarkus — Workshop Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <meta name="description" content="Step-by-step workshop guide for building REST APIs with Quarkus — for all skill levels.">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <style>
+    :root {
+      --theme-color: #4695EB;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: #1b1f2e;
+    }
+    .sidebar .app-name-link {
+      color: #fff !important;
+      font-weight: 700;
+      font-size: 1.1rem;
+      line-height: 1.4;
+      padding: 1.5rem 1rem 1rem;
+      display: block;
+    }
+    .sidebar-nav a {
+      color: #a0b4cc !important;
+      font-size: 0.875rem;
+    }
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      color: #4695EB !important;
+    }
+    .sidebar-nav ul li.active > a {
+      color: #4695EB !important;
+      font-weight: 600;
+      border-right: 3px solid #4695EB;
+    }
+
+    /* Content */
+    .content {
+      max-width: 860px;
+    }
+    h1 {
+      font-size: 2rem;
+      border-bottom: 2px solid #4695EB;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      margin-top: 2.5rem;
+      border-bottom: 1px solid #e8edf2;
+      padding-bottom: 0.4rem;
+      color: #1b1f2e;
+    }
+    h3 {
+      color: #2c3e50;
+    }
+
+    /* Code blocks */
+    pre[class*=language-] {
+      border-radius: 6px;
+      font-size: 0.875em;
+    }
+    code:not([class]) {
+      background: #f0f4f8;
+      color: #c7254e;
+      border-radius: 3px;
+      padding: 0.1em 0.35em;
+      font-size: 0.875em;
+    }
+
+    /* Tables */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.9rem;
+    }
+    thead tr {
+      background: #4695EB;
+      color: #fff;
+    }
+    th, td {
+      padding: 0.6rem 1rem;
+      border: 1px solid #dce3ea;
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: #f7f9fc;
+    }
+
+    /* Blockquotes */
+    blockquote {
+      border-left: 4px solid #4695EB;
+      background: #f0f6ff;
+      color: #334;
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 4px 4px 0;
+    }
+    blockquote p {
+      margin: 0;
+    }
+
+    /* Copy button */
+    .docsify-copy-code-button {
+      font-size: 0.75em !important;
+      background: #4695EB !important;
+      color: #fff !important;
+    }
+
+    /* Search */
+    .search input {
+      border-radius: 4px;
+      border: 1px solid #2d3650;
+      background: #252b40;
+      color: #fff;
+    }
+    .search input::placeholder {
+      color: #6b7a99;
+    }
+
+    /* Badge-style labels in stretch goals */
+    .tip, .warn {
+      border-radius: 4px;
+      padding: 0.6rem 1rem;
+      margin: 0.75rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">Loading…</div>
+  <script>
+    window.$docsify = {
+      name: 'Build Day: Quarkus',
+      nameLink: '/',
+      repo: 'jolynt24/build-day-quarkus',
+      loadSidebar: true,
+      subMaxLevel: 2,
+      auto2top: true,
+      search: {
+        maxAge: 86400000,
+        paths: 'auto',
+        placeholder: 'Search guide…',
+        noData: 'Nothing found.',
+        depth: 4,
+      },
+      copyCode: {
+        buttonText: 'Copy',
+        errorText: 'Error',
+        successText: 'Copied!',
+      },
+      pagination: {
+        previousText: 'Previous',
+        nextText: 'Next',
+        crossChapter: true,
+      },
+    }
+  </script>
+  <!-- Docsify core -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <!-- Plugins -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+  <!-- Syntax highlighting -->
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-java.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-sql.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-properties.min.js"></script>
+</body>
+</html>
