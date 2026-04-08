@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '2026/build-day/**'
+      - '2026/build-day/build-day-quarkus/**'
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +20,7 @@ jobs:
 
       - name: Deploy to jolynt24/build-day
         run: |
-          cd 2026/build-day
+          cd 2026/build-day/build-day-quarkus
           git init
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
