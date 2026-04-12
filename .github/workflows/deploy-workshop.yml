@@ -2,7 +2,7 @@ name: Deploy Workshop Site
 
 on:
   push:
-    branches: [main]
+    branches: [main, build-day-quarkus]
     paths:
       - '2026/build-day/build-day-quarkus/**'
   workflow_dispatch:
@@ -15,17 +15,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Deploy to jolynt24/build-day
+      - name: Deploy quarkus workshop to jolynt24/build-day
+        env:
+          TOKEN: ${{ secrets.PAGES_DEPLOY_TOKEN }}
         run: |
-          cd 2026/build-day/build-day-quarkus
-          git init
+          git clone --branch gh-pages https://x-access-token:${TOKEN}@github.com/jolynt24/build-day.git gh-pages-repo
+
+          rm -rf gh-pages-repo/quarkus
+          mkdir -p gh-pages-repo/quarkus
+          cp -r 2026/build-day/build-day-quarkus/. gh-pages-repo/quarkus/
+
+          cd gh-pages-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Deploy workshop site"
-          git push --force \
-            https://x-access-token:${{ secrets.PAGES_DEPLOY_TOKEN }}@github.com/jolynt24/build-day.git \
-            HEAD:gh-pages
+          git add quarkus/
+          git diff --cached --quiet || git commit -m "Deploy Build Day: Quarkus workshop"
+          git push
