@@ -5,15 +5,15 @@ on:
     branches: [main, build-day-quarkus]
     paths:
       - '2026/build-day/build-day-quarkus/**'
+      - '2026/software-engineering/java/quarkus-wellness-api/**'
   workflow_dispatch:
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  deploy:
+  deploy-wiki:
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: true
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -34,3 +34,42 @@ jobs:
           git add quarkus/
           git diff --cached --quiet || git commit -m "Deploy Build Day: Quarkus workshop"
           git push
+
+  sync-source:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: source
+      cancel-in-progress: true
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Sync quarkus-wellness-api to jolynt24/build-day main
+        env:
+          TOKEN: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+        run: |
+          git clone https://x-access-token:${TOKEN}@github.com/jolynt24/build-day.git build-day-repo
+
+          cd build-day-repo
+          if git ls-remote --heads origin main | grep -q main; then
+            git checkout main
+          else
+            git checkout --orphan main
+            git rm -rf . 2>/dev/null || true
+          fi
+          cd ..
+
+          rsync -av --delete \
+            --exclude='.gradle/' \
+            --exclude='build/' \
+            --exclude='.DS_Store' \
+            --exclude='.claude/' \
+            2026/software-engineering/java/quarkus-wellness-api/ \
+            build-day-repo/quarkus-wellness-api/
+
+          cd build-day-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add quarkus-wellness-api/
+          git diff --cached --quiet || git commit -m "Sync quarkus-wellness-api source"
+          git push -u origin main
